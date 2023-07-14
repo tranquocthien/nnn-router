@@ -1,0 +1,21 @@
+.idea
+# macOS
+.DS_Store
+
+# Dependency directories
+node_modules/
+yarn.lock
+yarn-error.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# dotenv environment variables file
+.env
+.env.test
+
+# Building output directory
+dist
+
+# Jest coverage directory
+coverage/
