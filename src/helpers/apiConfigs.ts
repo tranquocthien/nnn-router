@@ -1,10 +1,11 @@
-import { RequestHandler, Router } from 'express-serve-static-core'
+import type { RequestHandler, Router } from 'express-serve-static-core'
 import chalk from 'chalk'
 import path from 'path'
-import type { Options } from '../types'
+import type { Options, RouteModule } from '../types'
 import { reqMethods } from '../constants'
 
-const isFunction = (func: any) => typeof func === 'function'
+type IsFunction = (func: any) => func is Function
+const isFunction: IsFunction = ((func: any) => typeof func === 'function') as any
 const debugPrefix = chalk.greenBright('[NnnRouter][DEBUG] ')
 
 export const parseMethodAndRoutePathFromFilePath = (relativeFilePath: string) => {
@@ -38,15 +39,13 @@ export const getAPIConfigs = (relativeFilePaths: string[]) => {
        * Notice that "Middleware /me" is not necessary to place before "GET /meme"
        */
       if (
-        (config1.routePath === config2.routePath ||
-          config1.routePath.startsWith(config2.routePath + '/')) &&
+        config1.routePath.startsWith(config2.routePath + '/') &&
         config2.methodName === reqMethods[0]
       ) {
         return 1
       }
       if (
-        (config2.routePath === config1.routePath ||
-          config2.routePath.startsWith(config1.routePath + '/')) &&
+        config2.routePath.startsWith(config1.routePath + '/') &&
         config1.methodName === reqMethods[0]
       ) {
         return -1
@@ -69,7 +68,7 @@ export const resolveModulesFromAPIConfigs = async (
   relativeFilePaths: string[],
   absoluteRouteDir: string
 ) => {
-  const modules = []
+  const modules: RouteModule[] = []
   for (const relativeFilePath of relativeFilePaths) {
     const absoluteFilePath = path.join(absoluteRouteDir, relativeFilePath)
     const module = await import(absoluteFilePath)
@@ -86,8 +85,8 @@ const getDebugMessage = ({ methodName, routePath }) =>
 export const applyAPIConfigsToRouter = (
   router: Router,
   apiConfigs: Awaited<ReturnType<typeof getAPIConfigs>>,
-  apiModules: any[],
-  options: Options
+  apiModules: RouteModule[],
+  options: Options = {}
 ) => {
   const debug = (msg: string) => options.debug && process.stdout.write(msg)
   const debugMessages = apiConfigs.map(getDebugMessage)
@@ -101,16 +100,7 @@ export const applyAPIConfigsToRouter = (
     const handlers: RequestHandler[] = []
     if (methodName === reqMethods[0]) {
       // Applying middleware
-      if (typeof module === 'object') {
-        handlers.push(
-          ...Object.values(module as Record<string, RequestHandler>)
-            .flat()
-            .filter(isFunction)
-        )
-      } else if (isFunction(module)) {
-        // In CommonJS, the `module` can be a function
-        handlers.push(module)
-      }
+      handlers.push(...Object.values(module).flat().filter(isFunction))
       if (handlers.length) {
         router.use(routePath, ...handlers)
         debug(`   ${chalk.green('⇒ Succeeded!')}\n`)
@@ -118,20 +108,12 @@ export const applyAPIConfigsToRouter = (
         debug(`   ${chalk.yellow(chalk.bold('⇒ No handling function'))}\n`)
       }
     } else {
-      if (typeof module.middleware === 'object') {
-        handlers.push(
-          ...Object.values(module.middleware as Record<string, RequestHandler>)
-            .flat()
-            .filter(isFunction)
-        )
-      } else if (isFunction(module.middleware)) {
-        handlers.push(module.middleware)
-      }
-
-      if (isFunction(module)) {
-        // In CommonJS, the `module` can be a function
-        handlers.push(module)
-      } else if (isFunction(module.default)) {
+      if (isFunction(module.default)) {
+        if (typeof module.middleware === 'object') {
+          handlers.push(...Object.values(module.middleware).flat().filter(isFunction))
+        } else if (isFunction(module.middleware)) {
+          handlers.push(module.middleware)
+        }
         handlers.push(module.default)
       }
       if (handlers.length) {

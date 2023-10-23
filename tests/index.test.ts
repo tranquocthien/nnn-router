@@ -179,11 +179,11 @@ describe('Test Request Response', function () {
 })
 
 describe(`Test option ${chalk.inverse('absolutePath')}`, function () {
-  const router = nnnRouter({
-    routeDir,
-    absolutePath: path.join(__dirname, 'other-routes'),
-  })
   it('GET /', async function () {
+    const router = nnnRouter({
+      routeDir,
+      absolutePath: path.join(__dirname, 'other-routes'),
+    })
     const req = createRequest({
       method: 'GET',
       url: '/',
@@ -194,9 +194,15 @@ describe(`Test option ${chalk.inverse('absolutePath')}`, function () {
   })
 })
 
-describe('Test loading CommonJS Module', function () {
-  const router = nnnRouter({
-    routeDir: path.relative(process.cwd(), path.join(__dirname, 'cjs-routes')),
+describe(`Test initializing router without options`, () => {
+  let router: NnnRouter
+  let spyProcessCwd: jest.SpyInstance<string>
+  beforeAll(() => {
+    spyProcessCwd = jest.spyOn(process, 'cwd').mockReturnValue(__dirname)
+    router = nnnRouter()
+  })
+  afterAll(() => {
+    spyProcessCwd.mockRestore()
   })
   it('GET /', async function () {
     const req = createRequest({
@@ -205,6 +211,6 @@ describe('Test loading CommonJS Module', function () {
     })
     const res = createResponseOf(req)
     await waitResponse(req, res, router)
-    expect(res._getData()).toEqual('Get root of cjs')
+    expect(res._getData()).toEqual('Get root')
   })
 })

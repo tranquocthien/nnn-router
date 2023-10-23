@@ -24,6 +24,7 @@ beforeEach(() => {
     resolve = rs
     reject = rj
   })
+  applyWaitingMiddlewareToRouter(router, promise)
   req = createRequest({
     method: 'GET',
     path: '/',
@@ -33,45 +34,40 @@ beforeEach(() => {
 
 describe('Test function applyWaitingMiddlewareToRouter', () => {
   it('Request will be suspended if the promise is pending', async () => {
-    applyWaitingMiddlewareToRouter(router, promise)
     app(req, res)
     expect(res._isEndCalled()).toBe(false)
   })
 
   it('Request will be continue after the promise is fulfilled', async () => {
-    applyWaitingMiddlewareToRouter(router, promise)
     app(req, res)
-    resolve()
     await new Promise((rs, rj) => {
       res.on('finish', rs).on('error', rj)
+      resolve()
     })
   })
 
   it('Request will be failed after the promise is rejected', async () => {
-    applyWaitingMiddlewareToRouter(router, promise)
     app(req, res)
     const err = new Error('sample error')
-    reject(err)
     await expect(
       new Promise((rs, rj) => {
         res.on('finish', rs).on('error', rj)
+        reject(err)
       })
     ).rejects.toBe(err)
   })
 
   describe('Test removeLayerMiddleware', () => {
     it('should remove layerMiddleware from router.stack after the promise is fulfilled and have no request that is inprogress', async () => {
-      applyWaitingMiddlewareToRouter(router, promise)
       app(req, res)
-      resolve()
       await new Promise((rs, rj) => {
         res.on('finish', rs).on('error', rj)
+        resolve()
       })
       expect(router.stack).toHaveLength(0)
     })
 
     it('should not remove layerMiddleware from router.stack after the promise is fulfilled and have request that is inprogress', async () => {
-      applyWaitingMiddlewareToRouter(router, promise)
       const req2 = createRequest({
         method: 'POST',
         path: '/',
@@ -79,9 +75,9 @@ describe('Test function applyWaitingMiddlewareToRouter', () => {
       const res2 = createResponseOf(req2)
       app(req, res)
       router(req2, res2, () => {})
-      resolve()
       await new Promise((rs, rj) => {
         res.on('finish', rs).on('error', rj)
+        resolve()
       })
       expect(res2._isEndCalled()).toBe(false)
       expect(router.stack).not.toHaveLength(0)

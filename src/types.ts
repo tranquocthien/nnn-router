@@ -1,4 +1,4 @@
-import { Router } from 'express-serve-static-core'
+import { RequestHandler, Router } from 'express-serve-static-core'
 
 export type JSExt = 'js' | 'cjs' | 'mjs' | 'ts'
 
@@ -34,3 +34,5 @@ export interface Options {
    */
   debug?: boolean
 }
+
+export type RouteModule = Record<any, RequestHandler[] | RequestHandler>
