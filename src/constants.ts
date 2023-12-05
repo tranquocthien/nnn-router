@@ -9,4 +9,4 @@ export const reqMethods = [
   'put',
   'patch',
   'delete',
-]
+] as const

@@ -20,17 +20,20 @@ function nnnRouter(options: Options = {}) {
   const filePattern = getGlobFilePattern(options.ext)
   const absoluteRouteDir = options.absolutePath || path.join(process.cwd(), routeDir)
   const router = (options.baseRouter || Router()) as NnnRouter
+  const privateRouter = Router() as NnnRouter
+  router.use(privateRouter)
 
   const promise = globP(filePattern, { cwd: absoluteRouteDir })
     .then(getAPIConfigs)
     .then(async (apiConfigs) => {
       const relativeFilePaths = apiConfigs.map((config) => config.relativeFilePath)
       const apiModules = await resolveModulesFromAPIConfigs(relativeFilePaths, absoluteRouteDir)
-      return applyAPIConfigsToRouter(router, apiConfigs, apiModules, options)
+      return applyAPIConfigsToRouter(privateRouter, apiConfigs, apiModules, options)
     })
 
-  applyWaitingMiddlewareToRouter(router, promise)
-  router.promise = () => promise
+  privateRouter.promise = () => promise
+  router.promise = privateRouter.promise
+  applyWaitingMiddlewareToRouter(privateRouter)
 
   return router
 }

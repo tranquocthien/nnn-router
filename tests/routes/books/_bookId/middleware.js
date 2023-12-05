@@ -1,6 +1,6 @@
 import { userId, permissionId } from '../../../data.mocks'
 
-const middlewareUser = (req, res, next) => {
+const middlewareUser = async (req, res, next) => {
   req.userId = userId
   next()
 }

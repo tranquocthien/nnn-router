@@ -17,7 +17,8 @@
     "default": "./dist/cjs/index.js"
   },
   "scripts": {
-    "prebuild": "rimraf dist",
+    "prepublish": "yarn build",
+    "prebuild": "yarn test && rimraf dist",
     "build": "yarn build:cjs && yarn build:esm",
     "build:cjs": "tsc",
     "build:esm": "tsc -p tsconfig-esm.json && renamer --find '/\\.js$/' --replace '.mjs' 'dist/esm/**/*.js'",

@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "moduleResolution": "Node",
     "allowJs": true,
+    "removeComments": true,
     "outDir": "dist/cjs",
     "declaration": false
   },

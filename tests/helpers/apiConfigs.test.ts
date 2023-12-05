@@ -170,7 +170,7 @@ describe('applyAPIConfigsToRouter', () => {
   let apiModules: RouteModule[], apiConfigs: Array<any>
   beforeEach(async () => {
     routerMock = jest.fn()
-    reqMethods.forEach((method) => {
+    reqMethods.forEach((method: string) => {
       if (method === reqMethods[0]) method = 'use'
       routerMock[method] = jest.fn().mockReturnThis()
     })

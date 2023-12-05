@@ -1,16 +1,32 @@
 import type { RequestHandler, Router } from 'express-serve-static-core'
 import chalk from 'chalk'
 import path from 'path'
-import type { Options, RouteModule } from '../types'
+import type { AsyncRequestHandler, Options, RouteModule } from '../types'
 import { reqMethods } from '../constants'
 
-type IsFunction = (func: any) => func is Function
-const isFunction: IsFunction = ((func: any) => typeof func === 'function') as any
+type IsFunction = (func: any) => func is (...args: any[]) => any
+const isFunction = ((func: any) => typeof func === 'function') as IsFunction
+const wrapAsyncRequestHandler =
+  (func: AsyncRequestHandler): RequestHandler =>
+  (req, res, next) => {
+    func(req, res, next).catch(next)
+  }
+const sampleAsyncFunction = async () => {}
+const isAsyncRequestHandler = (func: RequestHandler | AsyncRequestHandler): func is AsyncRequestHandler =>
+  func.constructor === sampleAsyncFunction.constructor
+const requestHandlerMapper = (func: RequestHandler | AsyncRequestHandler) =>
+  isAsyncRequestHandler(func) ? wrapAsyncRequestHandler(func) : func
+
 const debugPrefix = chalk.greenBright('[NnnRouter][DEBUG] ')
+
+const isESM = !(typeof require === 'function' && typeof module === 'object')
 
 export const parseMethodAndRoutePathFromFilePath = (relativeFilePath: string) => {
   const indexOfLastSlash = relativeFilePath.lastIndexOf('/')
-  const methodName = relativeFilePath.slice(indexOfLastSlash + 1, relativeFilePath.lastIndexOf('.'))
+  const methodName = relativeFilePath.slice(
+    indexOfLastSlash + 1,
+    relativeFilePath.lastIndexOf('.')
+  ) as (typeof reqMethods)[number]
   const isValidMethod = reqMethods.includes(methodName)
   if (!isValidMethod) {
     return null
@@ -70,7 +86,8 @@ export const resolveModulesFromAPIConfigs = async (
 ) => {
   const modules: RouteModule[] = []
   for (const relativeFilePath of relativeFilePaths) {
-    const absoluteFilePath = path.join(absoluteRouteDir, relativeFilePath)
+    const absoluteFilePath =
+      (isESM ? 'file://' : '') + path.join(absoluteRouteDir, relativeFilePath)
     const module = await import(absoluteFilePath)
     modules.push(module)
   }
@@ -100,7 +117,7 @@ export const applyAPIConfigsToRouter = (
     const handlers: RequestHandler[] = []
     if (methodName === reqMethods[0]) {
       // Applying middleware
-      handlers.push(...Object.values(module).flat().filter(isFunction))
+      handlers.push(...Object.values(module).flat().filter(isFunction).map(requestHandlerMapper))
       if (handlers.length) {
         router.use(routePath, ...handlers)
         debug(`   ${chalk.green('⇒ Succeeded!')}\n`)
@@ -110,11 +127,13 @@ export const applyAPIConfigsToRouter = (
     } else {
       if (isFunction(module.default)) {
         if (typeof module.middleware === 'object') {
-          handlers.push(...Object.values(module.middleware).flat().filter(isFunction))
+          handlers.push(
+            ...Object.values(module.middleware).flat().filter(isFunction).map(requestHandlerMapper)
+          )
         } else if (isFunction(module.middleware)) {
-          handlers.push(module.middleware)
+          handlers.push(requestHandlerMapper(module.middleware))
         }
-        handlers.push(module.default)
+        handlers.push(requestHandlerMapper(module.default))
       }
       if (handlers.length) {
         router[methodName](routePath, ...handlers)

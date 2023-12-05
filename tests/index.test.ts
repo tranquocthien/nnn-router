@@ -11,13 +11,16 @@ import {
   sampleParamTraceBooks2,
   userId,
 } from './data.mocks'
+import { ErrorRequestHandler } from 'express-serve-static-core'
 
 const routeDir = path.relative(process.cwd(), path.join(__dirname, 'routes'))
 const router = nnnRouter({
   routeDir,
-  debug: true,
 })
-const layerMiddleware = router.stack[router.stack.length - 1]
+const errorRequestHandler: ErrorRequestHandler = (err, req, res, next) => {
+  res.status(500).send(err.message)
+}
+router.use(errorRequestHandler)
 
 const createResponseOf = (req: ReturnType<typeof createRequest>) =>
   createResponse({
@@ -67,7 +70,6 @@ const testMiddlewareOfBookId = async function () {
 }
 
 describe(`Test ${chalk.yellowBright('middlewareWaitingForInit')}`, function () {
-  // this.timeout(5000)
   function sendRequests() {
     return Promise.all([testGetBookCount.call(this), testMiddlewareOfBookId.call(this)])
   }
@@ -79,16 +81,9 @@ describe(`Test ${chalk.yellowBright('middlewareWaitingForInit')}`, function () {
     await router.promise()
     await sendRequests.call(this)
   })
-  it(`Remove layer of ${chalk.yellowBright('middlewareWaitingForInit')} from ${chalk.blueBright(
-    'router'
-  )}.${chalk.cyanBright('stack')}`, async function () {
-    await router.promise()
-    expect(router.stack.indexOf(layerMiddleware)).toEqual(-1)
-  })
 })
 
 describe('Test Request Response', function () {
-  // this.timeout(2000)
   it('GET /', async function () {
     const req = createRequest({
       method: 'GET',
@@ -164,7 +159,8 @@ describe('Test Request Response', function () {
     })
     const res = createResponseOf(req)
     await waitResponse(req, res)
-    expect(res._getData()).toEqual('Get bookId: 1')
+    expect(res._getStatusCode()).toEqual(500)
+    expect(res._getData()).toEqual('Sample error while getting book 1')
   })
   it('GET /books/:bookId/authors/:authorId', async function () {
     const req = createRequest({

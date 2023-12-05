@@ -3,12 +3,12 @@ import {
   sampleParamTraceBooks2,
 } from '../../data.mocks'
 
-export default (req, res) => {
+export default async (req, res) => {
   res.send('Tracing books')
 }
 
 export const middleware = [
-  (req, res, next) => {
+  async (req, res, next) => {
     req.sampleParam = sampleParamTraceBooks1
     next()
   },
