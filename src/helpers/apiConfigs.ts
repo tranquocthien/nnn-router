@@ -1,21 +1,9 @@
-import type { RequestHandler, Router } from 'express-serve-static-core'
+import type { ErrorRequestHandler, RequestHandler, Router } from 'express-serve-static-core'
 import chalk from 'chalk'
 import path from 'path'
-import type { AsyncRequestHandler, Options, RouteModule } from '../types'
+import type { Options, RouteModule } from '../types'
 import { reqMethods } from '../constants'
-
-type IsFunction = (func: any) => func is (...args: any[]) => any
-const isFunction = ((func: any) => typeof func === 'function') as IsFunction
-const wrapAsyncRequestHandler =
-  (func: AsyncRequestHandler): RequestHandler =>
-  (req, res, next) => {
-    func(req, res, next).catch(next)
-  }
-const sampleAsyncFunction = async () => {}
-const isAsyncRequestHandler = (func: RequestHandler | AsyncRequestHandler): func is AsyncRequestHandler =>
-  func.constructor === sampleAsyncFunction.constructor
-const requestHandlerMapper = (func: RequestHandler | AsyncRequestHandler) =>
-  isAsyncRequestHandler(func) ? wrapAsyncRequestHandler(func) : func
+import { isFunction, requestHandlerMapper } from './handler'
 
 const debugPrefix = chalk.greenBright('[NnnRouter][DEBUG] ')
 
@@ -114,7 +102,7 @@ export const applyAPIConfigsToRouter = (
     const module = apiModules[i]
     const msg = debugMessages[i]
     debug(debugPrefix + msg + ' '.repeat(maxLength - msg.length))
-    const handlers: RequestHandler[] = []
+    const handlers: (RequestHandler | ErrorRequestHandler)[] = []
     if (methodName === reqMethods[0]) {
       // Applying middleware
       handlers.push(...Object.values(module).flat().filter(isFunction).map(requestHandlerMapper))

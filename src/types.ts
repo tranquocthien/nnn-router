@@ -1,4 +1,5 @@
 import {
+  ErrorRequestHandler,
   NextFunction,
   ParamsDictionary,
   Request,
@@ -57,7 +58,29 @@ export interface AsyncRequestHandler<
   ): Promise<any>
 }
 
+export interface AsyncErrorRequestHandler<
+  P = ParamsDictionary,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = ParsedQs,
+  LocalsObj extends Record<string, any> = Record<string, any>
+> {
+  (
+    err: any,
+    req: Request<P, ResBody, ReqBody, ReqQuery, LocalsObj>,
+    res: Response<ResBody, LocalsObj>,
+    next: NextFunction
+  ): Promise<any>
+}
+
 export type RouteModule = Record<
   any,
-  AsyncRequestHandler[] | AsyncRequestHandler | RequestHandler[] | RequestHandler
+  | AsyncRequestHandler[]
+  | AsyncRequestHandler
+  | RequestHandler[]
+  | RequestHandler
+  | ErrorRequestHandler[]
+  | ErrorRequestHandler
+  | AsyncErrorRequestHandler[]
+  | AsyncErrorRequestHandler
 >
